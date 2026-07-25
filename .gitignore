@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Database (contains real submission data once run)
+backend/uploads/
+uploads/
+*.db
+
+# Student submissions (contains names, emails, ID numbers -- never commit)
+submissions/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
