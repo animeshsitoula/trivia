@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Your Answer</title>
+    <link rel="stylesheet" href="templates/style.css">
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['$$', '$$']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+</head>
+<body>
+    <header class="top-bar"><p class="site-url">www.trinity.edu.np</p></header>
+
+    <main class="page-wrapper">
+        <p class="collab-mark">SciTech Guild <span class="x">×</span> Trinity Computer Council</p>
+
+        <section class="hero">
+            <h1>Weekly Trivia</h1>
+            <h2 class="week-label">Week 07 — Live Now</h2>
+        </section>
+
+        <nav class="stepper" aria-label="Submission progress">
+            <div class="node done"><span class="circle">✓</span>Subject</div>
+            <div class="line"></div>
+            <div class="node current"><span class="circle">2</span>Answer</div>
+            <div class="line"></div>
+            <div class="node"><span class="circle">3</span>Done</div>
+        </nav>
+
+        <div class="form-section">
+
+        <div class="question-card">
+            <span class="qp-subject" id="subject-name">
+            Loading...
+            </span>
+
+            <span class="qp-ref" id="question-ref">
+            Loading...
+            </span>
+
+            <p class="qp-question" id="question-text">
+            Loading question...
+            </p>
+        </div>
+
+            <form class="answer-form">
+                <div class="field">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" placeholder="Your full name" required>
+                </div>
+
+                <div class="field">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="you@trinity.edu.np" required>
+                </div>
+
+                <div class="field">
+                    <label for="id-card-no">ID card no.</label>
+                    <input type="text" id="id-card-no" name="idcard" placeholder="e.g. 2023-CS-045" required>
+                </div>
+
+                <div class="field">
+                    <label for="file-upload">Upload answer</label>
+                    <div class="dropzone">
+                        <input type="file" id="file-upload" class="dropzone-input" name="answer-file" accept=".pdf,.png,.jpg,.jpeg" required>
+                        <label for="file-upload" class="dropzone-label">
+                            <span class="dropzone-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                                    <path d="M12 15V4M12 4l-4 4M12 4l4 4"/>
+                                    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+                                </svg>
+                            </span>
+                            <span class="dropzone-title">Drop your answer here</span>
+                            <span class="dropzone-sub">or click to browse</span>
+                            <span class="dropzone-formats">PDF, PNG, JPG supported · Max 10MB</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit">Submit answer</button>
+
+                <div class="honesty-note">
+                    <p class="title">Keep it genuine</p>
+                    <p>Demonstrate your own knowledge — skip the AI tools and outside help.</p>
+                </div>
+
+                <input type="hidden" id="week-id" name="week_id">
+
+                <input type="hidden" id="subject-field" name="subject">
+            </form>
+
+        </div>
+    </main>
+
+    <footer class="bottom-bar">Education for the future</footer>
+    <p class="built-by">Built by Animesh Sitoula · DA2 · Trinity Computer Council</p>
+    <script src="answer.js"></script>
+</body>
+</html>

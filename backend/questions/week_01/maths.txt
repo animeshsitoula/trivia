@@ -1,0 +1,5 @@
+Solve for x using the quadratic formula:
+
+$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$
+
+given the equation \(2x^2 - 4x - 6 = 0\). Show your working.
