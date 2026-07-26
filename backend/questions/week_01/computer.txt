@@ -1,1 +1,0 @@
-Explain the difference between a stack and a queue, and give one real-world example of where each is used.

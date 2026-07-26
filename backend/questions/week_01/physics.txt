@@ -1,1 +1,0 @@
-A block slides down a frictionless incline of angle 30 degrees. Derive an expression for its acceleration and explain your reasoning.
