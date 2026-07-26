@@ -1,4 +1,4 @@
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "https://trivia-ehw5.onrender.com";
 
 async function loadActiveWeek() {
     const label = document.getElementById("week-label");
