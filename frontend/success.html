@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submission Confirmed</title>
+    <link rel="stylesheet" href="templates/style.css">
+</head>
+<body>
+    <header class="top-bar"><p class="site-url">www.trinity.edu.np</p></header>
+
+    <main class="page-wrapper page-wrapper--center">
+        <p class="collab-mark">SciTech Guild <span class="x">×</span> Trinity Computer Council</p>
+
+        <nav class="stepper" aria-label="Submission progress">
+            <div class="node done"><span class="circle">✓</span>Subject</div>
+            <div class="line"></div>
+            <div class="node done"><span class="circle">✓</span>Answer</div>
+            <div class="line"></div>
+            <div class="node current"><span class="circle">3</span>Done</div>
+        </nav>
+
+        <section class="confirmation-card">
+            <svg id="tick-animation" viewBox="0 0 52 52" aria-hidden="true">
+                <circle cx="26" cy="26" r="24" fill="none" />
+                <path d="M14 27l7 7 17-17" fill="none" />
+            </svg>
+
+            <h1>Submission Complete</h1>
+            <p class="confirmation-lead">Thank you for competing this week<span id="participant-name"></span>.</p>
+            <p>Your answer has been recorded. You'll be notified by email if you're selected as this week's top scorer.</p>
+
+            <a class="return-link" href="index.html">Back to Weekly Trivia</a>
+        </section>
+    </main>
+
+    <footer class="bottom-bar">Education for the future</footer>
+    <p class="built-by">Built by Animesh Sitoula · DA2 · Trinity Computer Council</p>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const name = params.get("name");
+
+        if (name) {
+            document.getElementById("participant-name").textContent = ", " + name;
+        }
+    </script>
+</body>
+</html>
