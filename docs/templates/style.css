@@ -291,6 +291,10 @@ h1 {
     transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
 
+#question-text {
+    white-space: pre-line;
+}
+
 .subject-card:hover,
 .subject-card:focus-within {
     transform: translateY(-6px);
