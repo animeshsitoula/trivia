@@ -812,6 +812,20 @@ button[type="submit"]:active {
     transition: border-color 0.15s ease, color 0.15s ease;
 }
 
+.dropzone.file-selected {
+    border-color: #1D9E75;
+    background-color: rgba(29, 158, 117, 0.06);
+}
+
+.dropzone.file-selected .dropzone-icon {
+    color: #1D9E75;
+}
+
+.dropzone.file-selected .dropzone-title {
+    color: #1D9E75;
+    font-weight: 600;
+}
+
 .return-link:hover {
     border-color: var(--maroon-800);
     color: var(--maroon-600);
