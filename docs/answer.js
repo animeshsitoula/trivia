@@ -128,6 +128,30 @@ function trackTabSwitching() {
     window.addEventListener("blur", registerSwitch);
 }
 
+function setupFileConfirmation() {
+    const fileInput = document.getElementById("file-upload");
+    const dropzone = document.querySelector(".dropzone");
+    const title = document.querySelector(".dropzone-title");
+    const sub = document.querySelector(".dropzone-sub");
+
+    if (!fileInput) return;
+
+    fileInput.addEventListener("change", function () {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const sizeKB = (file.size / 1024).toFixed(0);
+
+            title.textContent = file.name;
+            sub.textContent = `${sizeKB} KB — click to change file`;
+            dropzone.classList.add("file-selected");
+        } else {
+            title.textContent = "Drop your answer here";
+            sub.textContent = "or click to browse";
+            dropzone.classList.remove("file-selected");
+        }
+    });
+}
+
 function init() {
     const form = document.querySelector(".answer-form");
     if (form) {
@@ -137,6 +161,7 @@ function init() {
     }
     preventQuestionCopying();
     trackTabSwitching();
+    setupFileConfirmation();
     loadQuestion();
 }
 
