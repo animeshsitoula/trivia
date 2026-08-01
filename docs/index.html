@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Trivia — Trinity International College</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background:
+                radial-gradient(circle at 20% 10%, rgba(242,167,27,0.06), transparent 40%),
+                linear-gradient(180deg, #A31621 0%, #6E0F1A 55%, #4A0A12 100%);
+            color: #1C1C1C;
+            font-family: 'Inter', -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-bar {
+            text-align: center;
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(242,167,27,0.3);
+        }
+
+        .top-bar p {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            color: #F2A71B;
+            text-transform: uppercase;
+        }
+
+        .page-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            max-width: 460px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .collab-mark {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.65);
+            margin-bottom: 22px;
+        }
+
+        .collab-mark span { color: #F2A71B; margin: 0 6px; }
+
+        h1 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 46px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: #F2A71B;
+            line-height: 1.05;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: rgba(255,255,255,0.85);
+            line-height: 1.6;
+            margin-top: 16px;
+            margin-bottom: 34px;
+        }
+
+        .card {
+            background-color: #FBF8F0;
+            padding: 26px 24px;
+            border-radius: 6px;
+            width: 100%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+            border-top: 4px solid #F2A71B;
+            margin-bottom: 18px;
+        }
+
+        .card-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #7A0C1E;
+            margin-bottom: 14px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            text-align: left;
+            margin-bottom: 12px;
+        }
+
+        .info-row:last-child { margin-bottom: 0; }
+
+        .info-row .num {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #F2A71B;
+            color: #4A0A12;
+            font-family: 'Oswald', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .info-row p {
+            font-size: 13px;
+            color: #444;
+            line-height: 1.4;
+        }
+
+        .cta-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .btn {
+            display: block;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Oswald', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.15s ease, transform 0.05s ease;
+        }
+
+        .btn:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background-color: #F2A71B;
+            color: #4A0A12;
+        }
+
+        .btn-primary:hover { background-color: #FFC04D; }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: #F2A71B;
+            border: 1.5px solid rgba(242,167,27,0.5);
+        }
+
+        .btn-secondary:hover { border-color: #F2A71B; }
+
+        .bottom-bar {
+            background-color: #F2A71B;
+            color: #4A0A12;
+            text-align: center;
+            padding: 10px 20px;
+            font-family: 'Oswald', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <header class="top-bar"><p>www.trinity.edu.np</p></header>
+
+    <main class="page-wrapper">
+        <p class="collab-mark">SciTech Guild <span>×</span> Trinity Computer Council</p>
+        <h1>Weekly Trivia</h1>
+        <p class="subtitle">A weekly challenge testing knowledge and problem-solving across technology, science, mathematics, and logic.</p>
+
+        <div class="card">
+            <p class="card-title">How it works</p>
+            <div class="info-row">
+                <div class="num">1</div>
+                <p>Pick the subject you know best from this week's options.</p>
+            </div>
+            <div class="info-row">
+                <div class="num">2</div>
+                <p>Solve it and upload a photo or file of your worked answer.</p>
+            </div>
+            <div class="info-row">
+                <div class="num">3</div>
+                <p>Top scorers each week are announced on the leaderboard.</p>
+            </div>
+        </div>
+
+        <div class="cta-group">
+            <a href="subjects.html" class="btn btn-primary">Start this week's trivia</a>
+            <a href="leaderboard.html" class="btn btn-secondary">View leaderboard</a>
+        </div>
+    </main>
+
+    <footer class="bottom-bar">Education for the future</footer>
+
+    <script>
+        // Landing page has no dynamic data yet — this is just a
+        // placeholder in case we want to fetch a "week is live" check
+        // later (e.g. disabling the Start button if no week is active).
+        console.log("Landing page loaded.");
+    </script>
+</body>
+</html>
