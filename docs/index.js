@@ -20,6 +20,18 @@ async function loadActiveWeek() {
     }
 }
 
+document.querySelector(".modal-close").addEventListener("click", function () {
+    document.getElementById("class-modal").style.display = "none";
+    pendingHref = null;
+});
+
+document.getElementById("class-modal").addEventListener("click", function (event) {
+    if (event.target.id === "class-modal") {
+        this.style.display = "none";
+        pendingHref = null;
+    }
+});
+
 document.querySelectorAll(".choose-link").forEach(function (link) {
     link.addEventListener("click", function (event) {
         event.preventDefault();   // stop the direct navigation
