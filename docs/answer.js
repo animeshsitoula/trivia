@@ -87,7 +87,6 @@ async function handleSubmit(event) {
     }
 
     const form = event.target;
-    console.log("hidden value:", document.getElementById("question-id").value);
     const formData = new FormData(form);
 
     const payload = new FormData();
