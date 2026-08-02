@@ -5,7 +5,7 @@ Framework:
 - FastAPI
 
 Database:
-- PostgreSQL on Supabase, via SQLAlchemy ORM (Weeks + Questions + Submissions)
+- PostgreSQL on Supabase, via SQLAlchemy ORM (Weeks + Questions + Submissions + SubmissionFiles)
 
 Question storage:
 - Stored in the `questions` table in Supabase Postgres, editable
@@ -18,11 +18,13 @@ File storage:
   on most free hosts, so nothing important can live there).
 
 Features:
-- Fetch the active week's question for a chosen subject
-- Accept participant submissions (name, email, ID card, file)
-- Upload each submission's answer file + a readme.txt to
-  Supabase Storage under submissions/<name>_<uid>/
+- Fetch the active week's question for a chosen subject + class level
+- Accept participant submissions (name, email, ID card, one or more files)
+- Upload each submission's answer file(s) + a readme.txt to
+  Supabase Storage under <name>_<uid>/
+- Track server-side start_time / submit_time / time_taken per submission
 - Enforce ONE submission per ID card number, ever (not per week)
+- Leaderboard ranked by score, tie-broken by time_taken
 
 Author:
 - Animesh
@@ -30,7 +32,8 @@ Author:
 
 from fastapi import FastAPI, HTTPException, Form, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from database import SessionLocal, Week, Question, Submission
+from typing import List
+from database import SessionLocal, Week, Question, Submission, SubmissionFile
 from supabase import create_client
 from dotenv import load_dotenv
 
@@ -62,9 +65,6 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # --------------------------------------------------
 # CORS
-# Allowed origins come from an env var so you can add your
-# live frontend URL without touching code, e.g:
-#   CORS_ORIGINS=http://127.0.0.1:5500,https://yourname.github.io
 # --------------------------------------------------
 
 _raw_origins = os.getenv(
@@ -81,7 +81,6 @@ app.add_middleware(
 )
 
 
-# Allowed answer file types
 ALLOWED_EXTENSIONS = {
     ".png",
     ".jpg",
@@ -91,29 +90,12 @@ ALLOWED_EXTENSIONS = {
     ".docx"
 }
 
-# Submissions with this many or more tab switches get auto-flagged
-# for manual review (filter by `flagged` in Supabase's Table Editor).
-# This is a signal, not proof of cheating -- adjust as needed.
 TAB_SWITCH_FLAG_THRESHOLD = 3
 
 
 @app.get("/health")
 def health_check():
-    return {
-        "status": "ok"
-    }
-
-
-@app.get("/week/active")
-def get_active_week_number():
-    db = SessionLocal()
-    active_week = _get_active_week(db)
-    db.close()
-
-    return {
-        "week_number": active_week.week_number,
-        "week": f"Week {active_week.week_number:02d}"
-    }
+    return {"status": "ok"}
 
 
 def _get_active_week(db):
@@ -131,78 +113,87 @@ def _get_active_week(db):
     return active_week
 
 
+@app.get("/week/active")
+def get_active_week_number():
+    db = SessionLocal()
+    try:
+        active_week = _get_active_week(db)
+        return {
+            "week_number": active_week.week_number,
+            "week": f"Week {active_week.week_number:02d}"
+        }
+    finally:
+        db.close()
+
 
 # --------------------------------------------------
-# Fetch the question for one subject in the active week
+# Fetch the question for one subject + class in the active week
 # --------------------------------------------------
 @app.get("/questions/active")
 def get_active_question(subject: str, class_level: str):
-
     db = SessionLocal()
-    active_week = _get_active_week(db)
+    try:
+        active_week = _get_active_week(db)
 
-    subject_key = subject.strip().lower()
-    class_key = class_level.strip()
+        subject_key = subject.strip().lower()
+        class_key = class_level.strip()
 
-    question = db.query(Question).filter(
-        Question.week_id == active_week.id,
-        Question.subject == subject_key,
-        Question.class_level == class_key
-    ).first()
+        question = db.query(Question).filter(
+            Question.week_id == active_week.id,
+            Question.subject == subject_key,
+            Question.class_level == class_key
+        ).first()
 
-    db.close()
+        if question is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No question found for subject '{subject}' in Class {class_level}"
+            )
 
-    if question is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No question found for subject '{subject}' in Class {class_level}"
-        )
+        # Server-side start timestamp -- generated here, at the moment
+        # the question is actually served, not trusted from the client
+        start_time = datetime.utcnow()
 
-    # Server-side start timestamp -- generated here, at the moment
-    # the question is actually served, not trusted from the client
-    start_time = datetime.utcnow()
+        return {
+            "subject": subject_key.capitalize(),
+            "week_number": active_week.week_number,
+            "week": f"Week {active_week.week_number:02d}",
+            "question": question.question_text,
+            "question_id": question.id,
+            "week_id": active_week.id,
+            "start_time": start_time.isoformat()
+        }
+    finally:
+        db.close()
 
-    return {
-        "subject": subject_key.capitalize(),
-        "week_number": active_week.week_number,
-        "week": f"Week {active_week.week_number:02d}",
-        "question": question.question_text,
-        "question_id": question.id,
-        "week_id": active_week.id,
-        "start_time": start_time.isoformat()
-    }
 
 # --------------------------------------------------
 # List every subject with a question for the active week
 # --------------------------------------------------
 @app.get("/questions/active/all")
 def get_all_active_questions():
-
     db = SessionLocal()
-    active_week = _get_active_week(db)
+    try:
+        active_week = _get_active_week(db)
 
-    questions = db.query(Question).filter(
-        Question.week_id == active_week.id
-    ).all()
+        questions = db.query(Question).filter(
+            Question.week_id == active_week.id
+        ).all()
 
-    db.close()
-
-    return [
-        {"subject": question.subject} for question in questions
-    ]
+        return [{"subject": question.subject} for question in questions]
+    finally:
+        db.close()
 
 
 # --------------------------------------------------
 # Submit participant answer
 #
 # - One submission per id_card_no, ever.
-# - Uploads the answer file + a readme.txt to Supabase
-#   Storage, under submissions/<name>_<uid>/, instead of
-#   writing to local disk.
+# - Accepts one or more files, uploaded to Supabase Storage under
+#   <name>_<uid>/, plus a readme.txt with submission metadata.
+# - start_time comes from the /questions/active response; submit_time
+#   and time_taken are computed server-side, here, at submit time.
 # --------------------------------------------------
-from fastapi import FastAPI, HTTPException, Form, File, UploadFile
-from typing import List
-
 @app.post("/submissions")
 def create_submission(
     name: str = Form(...),
@@ -217,72 +208,89 @@ def create_submission(
 ):
     db = SessionLocal()
 
-    existing = db.query(Submission).filter(Submission.id_card_no == id_card_no).first()
-    if existing:
-        db.close()
-        raise HTTPException(status_code=409, detail="This ID card number has already submitted an answer")
-
-    # Validate every file's extension BEFORE saving any of them
-    for f in files:
-        ext = os.path.splitext(f.filename)[1].lower()
-        if ext not in ALLOWED_EXTENSIONS:
-            db.close()
-            raise HTTPException(status_code=400, detail=f"Invalid file format: {f.filename}")
-
-    submit_time = datetime.utcnow()
     try:
-        parsed_start = datetime.fromisoformat(start_time)
-    except ValueError:
-        db.close()
-        raise HTTPException(status_code=400, detail="Invalid start_time format")
+        existing = db.query(Submission).filter(
+            Submission.id_card_no == id_card_no
+        ).first()
 
-    time_taken_seconds = int((submit_time - parsed_start).total_seconds())
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail="This ID card number has already submitted an answer"
+            )
 
-    user_uuid = str(uuid.uuid4())[:8]
-    safe_name = "".join(ch for ch in name if ch.isalnum() or ch in (" ", "_", "-")).strip().replace(" ", "_") or "participant"
-    folder_name = f"{safe_name}_{user_uuid}"
+        # Validate every file's extension BEFORE saving any of them
+        for f in files:
+            ext = os.path.splitext(f.filename)[1].lower()
+            if ext not in ALLOWED_EXTENSIONS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid file format: {f.filename}"
+                )
 
-    uploaded_paths = []
-
-    for f in files:
-        ext = os.path.splitext(f.filename)[1]
-        file_bytes = f.file.read()
-        unique_filename = str(uuid.uuid4()) + ext
-        storage_path = f"{folder_name}/{unique_filename}"
+        submit_time = datetime.utcnow()
 
         try:
-            supabase.storage.from_(SUPABASE_BUCKET).upload(
-                storage_path, file_bytes,
-                {"content-type": f.content_type or "application/octet-stream"}
-            )
-        except Exception as upload_error:
-            db.close()
-            raise HTTPException(status_code=502, detail=f"Failed to upload {f.filename}: {upload_error}")
+            parsed_start = datetime.fromisoformat(start_time)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_time format")
 
-        uploaded_paths.append((storage_path, f.filename))
+        time_taken_seconds = int((submit_time - parsed_start).total_seconds())
 
-    readme_text = (
-        f"Name: {name}\nEmail: {email}\nID Card No: {id_card_no}\nSubject: {subject}\n"
-        f"Submitted At (UTC): {submit_time}\n"
-        f"Files: {', '.join(name for _, name in uploaded_paths)}\n"
-    )
-    readme_path = f"{folder_name}/readme.txt"
-    supabase.storage.from_(SUPABASE_BUCKET).upload(
-        readme_path, readme_text.encode("utf-8"), {"content-type": "text/plain"}
-    )
+        user_uuid = str(uuid.uuid4())[:8]
+        safe_name = "".join(
+            ch for ch in name if ch.isalnum() or ch in (" ", "_", "-")
+        ).strip().replace(" ", "_") or "participant"
+        folder_name = f"{safe_name}_{user_uuid}"
 
-    new_submission = Submission(
-        name=name, email=email, id_card_no=id_card_no,
-        week_id=week_id, question_id=question_id, subject=subject,
-        submitted_at=submit_time, start_time=parsed_start, submit_time=submit_time,
-        time_taken=time_taken_seconds, tab_switch_count=tab_switch_count,
-        flagged=tab_switch_count >= TAB_SWITCH_FLAG_THRESHOLD
-    )
+        uploaded_paths = []
 
-    try:
+        for f in files:
+            ext = os.path.splitext(f.filename)[1]
+            file_bytes = f.file.read()
+            unique_filename = str(uuid.uuid4()) + ext
+            storage_path = f"{folder_name}/{unique_filename}"
+
+            try:
+                supabase.storage.from_(SUPABASE_BUCKET).upload(
+                    storage_path, file_bytes,
+                    {"content-type": f.content_type or "application/octet-stream"}
+                )
+            except Exception as upload_error:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Failed to upload {f.filename}: {upload_error}"
+                )
+
+            uploaded_paths.append((storage_path, f.filename))
+
+        readme_text = (
+            f"Name: {name}\nEmail: {email}\nID Card No: {id_card_no}\nSubject: {subject}\n"
+            f"Submitted At (UTC): {submit_time}\n"
+            f"Files: {', '.join(fname for _, fname in uploaded_paths)}\n"
+        )
+        readme_path = f"{folder_name}/readme.txt"
+        supabase.storage.from_(SUPABASE_BUCKET).upload(
+            readme_path, readme_text.encode("utf-8"), {"content-type": "text/plain"}
+        )
+
+        new_submission = Submission(
+            name=name,
+            email=email,
+            id_card_no=id_card_no,
+            week_id=week_id,
+            question_id=question_id,
+            subject=subject,
+            submitted_at=submit_time,
+            start_time=parsed_start,
+            submit_time=submit_time,
+            time_taken=time_taken_seconds,
+            tab_switch_count=tab_switch_count,
+            flagged=tab_switch_count >= TAB_SWITCH_FLAG_THRESHOLD
+        )
+
         db.add(new_submission)
-        db.commit()
-        db.refresh(new_submission)   # needed to get new_submission.id for the files below
+        db.flush()  # assigns new_submission.id without committing yet
 
         for storage_path, original_name in uploaded_paths:
             db.add(SubmissionFile(
@@ -290,42 +298,62 @@ def create_submission(
                 file_path=storage_path,
                 original_filename=original_name
             ))
-        db.commit()
 
-    except Exception:
+        db.commit()  # everything above commits together, atomically
+
+        return {"message": "Submission received", "name": name}
+
+    except HTTPException:
         db.rollback()
-        db.close()
-        raise HTTPException(status_code=409, detail="This ID card number has already submitted an answer")
+        raise
 
-    db.close()
-    return {"message": "Submission received", "name": name}
-    # ... (unchanged: db.add / db.commit / error handling) ...  
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Could not save submission: {e}")
+
+    finally:
+        db.close()
+
+
+# --------------------------------------------------
+# Leaderboard -- ranked by score, tie-broken by time_taken.
+# Optional ?class_level=11 filter.
+# --------------------------------------------------
 @app.get("/leaderboard")
-def get_leaderboard():
+def get_leaderboard(class_level: str = None):
     db = SessionLocal()
-    active_week = db.query(Week).filter(Week.is_active == True).first()
+    try:
+        active_week = _get_active_week(db)
 
-    if active_week is None:
+        query = db.query(Submission).filter(
+            Submission.week_id == active_week.id,
+            Submission.score.isnot(None)
+        )
+
+        if class_level is not None:
+            query = query.join(Question, Submission.question_id == Question.id).filter(
+                Question.class_level == class_level
+            )
+
+        submissions = query.order_by(
+            Submission.score.desc(),
+            Submission.time_taken.asc()
+        ).limit(10).all()
+
+        leaderboard = []
+        for s in submissions:
+            question = db.query(Question).filter(Question.id == s.question_id).first()
+            leaderboard.append({
+                "name": s.name,
+                "subject": question.subject if question else s.subject,
+                "class_level": question.class_level if question else None,
+                "score": s.score,
+                "time_taken": s.time_taken
+            })
+
+        return {
+            "week_number": active_week.week_number,
+            "leaderboard": leaderboard
+        }
+    finally:
         db.close()
-        raise HTTPException(status_code=404, detail="No active week found")
-
-    submissions = db.query(Submission).filter(
-        Submission.week_id == active_week.id,
-        Submission.score.isnot(None)
-    ).order_by(Submission.score.desc()).limit(10).all()
-
-    db.close()
-
-    leaderboard = []
-    for s in submissions:
-        question = db.query(Question).filter(Question.id == s.question_id).first()
-        leaderboard.append({
-            "name": s.name,
-            "subject": question.subject if question else "",
-            "score": s.score
-        })
-
-    return {
-        "week_number": active_week.week_number,
-        "leaderboard": leaderboard
-    }
