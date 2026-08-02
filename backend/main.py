@@ -72,7 +72,10 @@ _raw_origins = os.getenv(
     "CORS_ORIGINS",
     "http://127.0.0.1:5500,http://localhost:5500"
 )
-ALLOWED_ORIGINS = [origin.strip() for origin in _raw_origins.split(",") if origin.strip()]
+ALLOWED_ORIGINS = [
+        "https://animeshsitoula.github.io",
+        "https://trivia-m42in9vjt-animeshsitoula09-2898s-projects.vercel.app",
+]
 
 app.add_middleware(
     CORSMiddleware,
