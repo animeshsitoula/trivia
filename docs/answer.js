@@ -111,7 +111,7 @@ async function handleSubmit(event) {
         const result = await response.json();
 
         if (!response.ok) {
-            alert(JSON.stringify(result.detail, null, 2) || "Submission failed. Please try again.");
+            console.log(JSON.stringify(result.detail, null, 2) || "Submission failed. Please try again.");
             return;
         }
 
