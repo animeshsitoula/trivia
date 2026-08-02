@@ -55,7 +55,6 @@ async function loadQuestion() {
 
         const data = await response.json();
 
-        console.log(data.subject);
         document.getElementById("subject-name").textContent = data.subject;
         document.getElementById("question-ref").textContent = data.week;
         document.getElementById("question-text").textContent = data.question;
@@ -112,7 +111,7 @@ async function handleSubmit(event) {
         const result = await response.json();
 
         if (!response.ok) {
-            alert(result.detail || "Submission failed. Please try again.");
+            alert(JSON.stringify(result.detail, null, 2) || "Submission failed. Please try again.");
             return;
         }
 
