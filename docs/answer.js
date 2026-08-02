@@ -2,18 +2,48 @@ const API_BASE = "https://trivia-ehw5.onrender.com";
 
 const params = new URLSearchParams(window.location.search);
 const subject = params.get("subject");
+const classLevel = params.get("class_level");
+
+let selectedFiles = [];
+
+function renderFileList() {
+    const listEl = document.getElementById("file-list");
+    listEl.innerHTML = "";
+
+    selectedFiles.forEach((file, index) => {
+        const chip = document.createElement("div");
+        chip.className = "file-chip";
+        chip.innerHTML = `<span></span><span class="remove-file">×</span>`;
+        chip.querySelector("span").textContent = `${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
+
+        chip.querySelector(".remove-file").addEventListener("click", () => {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        });
+
+        listEl.appendChild(chip);
+    });
+}
+
+document.getElementById("file-upload").addEventListener("change", function () {
+    for (const file of this.files) {
+        selectedFiles.push(file);
+    }
+    renderFileList();
+    this.value = "";
+});
 
 async function loadQuestion() {
-    if (!subject) {
+    if (!subject || !classLevel) {
         document.getElementById("question-text").textContent =
-            "No subject selected. Please go back and choose one.";
+            "No subject or class selected. Please go back and choose again.";
         document.getElementById("week-label").textContent = "No subject selected";
         return;
     }
 
     try {
         const response = await fetch(
-            `${API_BASE}/questions/active?subject=${encodeURIComponent(subject)}`
+            `${API_BASE}/questions/active?subject=${encodeURIComponent(subject)}&class_level=${encodeURIComponent(classLevel)}`
         );
 
         if (!response.ok) {
@@ -28,14 +58,13 @@ async function loadQuestion() {
         document.getElementById("subject-name").textContent = data.subject;
         document.getElementById("question-ref").textContent = data.week;
         document.getElementById("question-text").textContent = data.question;
-
         document.getElementById("week-label").textContent = `${data.week} — Live Now`;
 
         document.getElementById("week-id").value = data.week_id;
         document.getElementById("subject-field").value = subject;
+        document.getElementById("question-id").value = data.question_id;
+        document.getElementById("start-time").value = data.start_time;
 
-        // Re-render any LaTeX in the question text (MathJax only
-        // scans the page once on load, so new text needs a nudge)
         if (window.MathJax && window.MathJax.typesetPromise) {
             MathJax.typesetPromise([document.getElementById("question-text")]);
         }
@@ -73,12 +102,27 @@ async function handleSubmit(event) {
         payload.append("files", file);
     });
 
-    // ...rest of the fetch/submit logic stays the same...
+    try {
+        const response = await fetch(`${API_BASE}/submissions`, {
+            method: "POST",
+            body: payload
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            alert(result.detail || "Submission failed. Please try again.");
+            return;
+        }
+
+        window.location.href = "success.html?name=" + encodeURIComponent(result.name);
+
+    } catch (error) {
+        console.log("Submission failed:", error);
+        alert("Could not reach the server. Please try again shortly.");
+    }
 }
-// Makes the question text harder to casually copy: blocks
-// copy/cut, right-click, and click-drag selection on this
-// element specifically. Note: this is a deterrent, not real
-// security -- a screenshot or DevTools defeats it instantly.
+
 function preventQuestionCopying() {
     const questionEl = document.getElementById("question-text");
     if (!questionEl) return;
@@ -89,10 +133,6 @@ function preventQuestionCopying() {
     questionEl.addEventListener("selectstart", (event) => event.preventDefault());
 }
 
-// Tracks how many times this tab loses focus or is switched away
-// from while answering -- a signal for manual review, not a hard
-// block. Counts once the question has actually started loading,
-// so opening the page itself doesn't count as a "switch".
 let tabSwitchCount = 0;
 
 function trackTabSwitching() {
@@ -104,41 +144,13 @@ function trackTabSwitching() {
         countField.value = tabSwitchCount;
     }
 
-    // Fires when the tab is minimized, switched away from, or the
-    // browser itself loses focus (e.g. switching to another app)
     document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
             registerSwitch();
         }
     });
 
-    // Extra safety net -- covers cases visibilitychange sometimes
-    // misses, like clicking into a separate window on the same screen
     window.addEventListener("blur", registerSwitch);
-}
-
-function setupFileConfirmation() {
-    const fileInput = document.getElementById("file-upload");
-    const dropzone = document.querySelector(".dropzone");
-    const title = document.querySelector(".dropzone-title");
-    const sub = document.querySelector(".dropzone-sub");
-
-    if (!fileInput) return;
-
-    fileInput.addEventListener("change", function () {
-        if (fileInput.files.length > 0) {
-            const file = fileInput.files[0];
-            const sizeKB = (file.size / 1024).toFixed(0);
-
-            title.textContent = file.name;
-            sub.textContent = `${sizeKB} KB — click to change file`;
-            dropzone.classList.add("file-selected");
-        } else {
-            title.textContent = "Drop your answer here";
-            sub.textContent = "or click to browse";
-            dropzone.classList.remove("file-selected");
-        }
-    });
 }
 
 function init() {
@@ -150,7 +162,6 @@ function init() {
     }
     preventQuestionCopying();
     trackTabSwitching();
-    setupFileConfirmation();
     loadQuestion();
 }
 
