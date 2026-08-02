@@ -20,5 +20,24 @@ async function loadActiveWeek() {
     }
 }
 
+document.querySelectorAll(".choose-link").forEach(function (link) {
+    link.addEventListener("click", function (event) {
+        event.preventDefault();   // stop the direct navigation
+
+        const targetHref = link.getAttribute("href");   // e.g. "answer.html?subject=physics"
+        pendingHref = targetHref;                          // remember which subject was clicked
+        document.getElementById("class-modal").style.display = "flex";
+    });
+});
+
+let pendingHref = null;
+
+document.querySelectorAll(".modal-choice").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+        const chosenClass = btn.dataset.class;
+        window.location.href = pendingHref + "&class_level=" + encodeURIComponent(chosenClass);
+    });
+});
+
 
 loadActiveWeek();
