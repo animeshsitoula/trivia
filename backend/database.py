@@ -119,6 +119,14 @@ class Question(Base):
     question_text = Column(String, nullable=False)
     __table_args__ = (UniqueConstraint("week_id", "subject", "class_level"),)
 
+class SubmissionFile(Base):
+    __tablename__ = "submission_files"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    submission_id = Column(Integer, ForeignKey("submissions.id"), nullable=False)
+    file_path = Column(String, nullable=False)
+    original_filename = Column(String, nullable=False)
+    uploaded_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    
 
 class Submission(Base):
     __tablename__ = "submissions"
@@ -137,3 +145,4 @@ class Submission(Base):
     submit_time = Column(DateTime, nullable=True)     # NEW
     time_taken = Column(Integer, nullable=True)        # NEW, in seconds
     submitted_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    file_path = Column(String, nullable=True)
