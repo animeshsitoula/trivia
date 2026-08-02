@@ -311,3 +311,33 @@ def create_submission(
         "message": "Submission received",
         "name": name
     }
+  
+@app.get("/leaderboard")
+def get_leaderboard():
+    db = SessionLocal()
+    active_week = db.query(Week).filter(Week.is_active == True).first()
+
+    if active_week is None:
+        db.close()
+        raise HTTPException(status_code=404, detail="No active week found")
+
+    submissions = db.query(Submission).filter(
+        Submission.week_id == active_week.id,
+        Submission.score.isnot(None)
+    ).order_by(Submission.score.desc()).limit(10).all()
+
+    db.close()
+
+    leaderboard = []
+    for s in submissions:
+        question = db.query(Question).filter(Question.id == s.question_id).first()
+        leaderboard.append({
+            "name": s.name,
+            "subject": question.subject if question else "",
+            "score": s.score
+        })
+
+    return {
+        "week_number": active_week.week_number,
+        "leaderboard": leaderboard
+    }
