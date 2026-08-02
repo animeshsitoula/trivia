@@ -136,16 +136,18 @@ def _get_active_week(db):
 # Fetch the question for one subject in the active week
 # --------------------------------------------------
 @app.get("/questions/active")
-def get_active_question(subject: str):
+def get_active_question(subject: str, class_level: str):
 
     db = SessionLocal()
     active_week = _get_active_week(db)
 
     subject_key = subject.strip().lower()
+    class_key = class_level.strip()
 
     question = db.query(Question).filter(
         Question.week_id == active_week.id,
-        Question.subject == subject_key
+        Question.subject == subject_key,
+        Question.class_level == class_key
     ).first()
 
     db.close()
@@ -153,17 +155,22 @@ def get_active_question(subject: str):
     if question is None:
         raise HTTPException(
             status_code=404,
-            detail=f"No question found for subject '{subject}'"
+            detail=f"No question found for subject '{subject}' in Class {class_level}"
         )
+
+    # Server-side start timestamp -- generated here, at the moment
+    # the question is actually served, not trusted from the client
+    start_time = datetime.utcnow()
 
     return {
         "subject": subject_key.capitalize(),
         "week_number": active_week.week_number,
         "week": f"Week {active_week.week_number:02d}",
         "question": question.question_text,
-        "week_id": active_week.id
+        "question_id": question.id,
+        "week_id": active_week.id,
+        "start_time": start_time.isoformat()
     }
-
 
 # --------------------------------------------------
 # List every subject with a question for the active week
