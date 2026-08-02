@@ -731,6 +731,42 @@ input[type="email"]:focus {
     color: var(--ink-faint);
 }
 
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.file-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #FBF8F0;
+    border: 1.5px solid #E4E2DA;
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.file-chip .remove-file {
+    cursor: pointer;
+    color: #7A0C1E;
+    font-weight: 700;
+    padding: 0 4px;
+}
+
+.add-file-btn {
+    display: inline-block;
+    padding: 9px 16px;
+    background: #7A0C1E;
+    color: #FBF8F0;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
 /* Submit button */
 
 button[type="submit"] {
