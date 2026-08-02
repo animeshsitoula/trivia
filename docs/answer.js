@@ -55,6 +55,7 @@ async function loadQuestion() {
 
         const data = await response.json();
 
+        console.log(data.subject);
         document.getElementById("subject-name").textContent = data.subject;
         document.getElementById("question-ref").textContent = data.week;
         document.getElementById("question-text").textContent = data.question;
