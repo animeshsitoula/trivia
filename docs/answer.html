@@ -67,23 +67,13 @@
                 </div>
 
                 <div class="field">
-                    <label for="file-upload">Upload answer</label>
-                    <div class="dropzone">
-                        <input type="file" id="file-upload" class="dropzone-input" name="answer-file" accept=".pdf,.png,.jpg,.jpeg" required>
-                        <label for="file-upload" class="dropzone-label">
-                            <span class="dropzone-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                                    <path d="M12 15V4M12 4l-4 4M12 4l4 4"/>
-                                    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-                                </svg>
-                            </span>
-                            <span class="dropzone-title">Drop your answer here</span>
-                            <span class="dropzone-sub">or click to browse</span>
-                            <span class="dropzone-formats">PDF, PNG, JPG supported · Max 10MB</span>
-                        </label>
-                    </div>
+                    <label>Upload answer(s)</label>
+                    <div class="file-list" id="file-list"></div>
+                
+                    <label for="file-upload" class="add-file-btn">+ Add file</label>
+                    <input type="file" id="file-upload" accept=".pdf,.png,.jpg,.jpeg,.docx,.txt" style="display: none;">
                 </div>
-
+                
                 <button type="submit">Submit answer</button>
 
                 <div class="honesty-note">
