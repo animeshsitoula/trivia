@@ -359,21 +359,40 @@ h1 {
     margin-bottom: 18px;
 }
 
-.difficulty-badge--beginner {
-    background-color: var(--gold-100);
-    color: var(--maroon-800);
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
 }
-
-.difficulty-badge--intermediate {
-    background-color: var(--gold-500);
-    color: var(--maroon-950);
+.modal-box {
+    background: #FBF8F0;
+    padding: 28px;
+    border-radius: 6px;
+    text-align: center;
+    width: 90%;
+    max-width: 320px;
 }
-
-.difficulty-badge--advanced {
-    background-color: var(--maroon-800);
-    color: var(--gold-400);
+.modal-title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    margin-bottom: 16px;
 }
-
+.modal-choice {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 4px;
+    background: #7A0C1E;
+    color: #FBF8F0;
+    font-weight: 600;
+    cursor: pointer;
+}
 .choose-link {
     margin-top: auto;
     font-family: var(--font-display);
