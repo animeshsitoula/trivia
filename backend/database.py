@@ -130,22 +130,24 @@ class SubmissionFile(Base):
 
 class Submission(Base):
     __tablename__ = "submissions"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
     email = Column(String, nullable=False)
-    id_card_no = Column(String, nullable=False, unique=True)
+    id_card_no = Column(String, nullable=False)   # CHANGED: unique=True removed
     week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)
-    question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)   # NEW
+    question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)
     subject = Column(String, nullable=False)
-    file_path = Column(String, nullable=False)
+    file_path = Column(String, nullable=True)
     score = Column(Integer, nullable=True)
     tab_switch_count = Column(Integer, nullable=False, default=0)
     flagged = Column(Boolean, nullable=False, default=False)
-    start_time = Column(DateTime, nullable=True)      # NEW
-    submit_time = Column(DateTime, nullable=True)     # NEW
-    time_taken = Column(Integer, nullable=True)        # NEW, in seconds
+    start_time = Column(DateTime, nullable=True)
+    submit_time = Column(DateTime, nullable=True)
+    time_taken = Column(Integer, nullable=True)
     submitted_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    file_path = Column(String, nullable=True)
+
+    __table_args__ = (UniqueConstraint("id_card_no", "week_id", "subject"),)   # CHANGED
 
 class Leaderboard(Base):
     __tablename__ = "leaderboard"

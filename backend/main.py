@@ -23,7 +23,8 @@ Features:
 - Upload each submission's answer file(s) + a readme.txt to
   Supabase Storage under <name>_<uid>/
 - Track server-side start_time / submit_time / time_taken per submission
-- Enforce ONE submission per ID card number, ever (not per week)
+- Each id_card_no may submit AT MOST 3 subjects per week, and never the
+  same subject twice in the same week
 - Leaderboard ranked by score, tie-broken by time_taken
 
 Author:
@@ -36,17 +37,12 @@ from typing import List
 from database import SessionLocal, Week, Question, Submission, SubmissionFile
 from supabase import create_client
 from dotenv import load_dotenv
-from sqlalchemy import text
 
 import uuid
 import os
 from datetime import datetime
 
 load_dotenv()
-
-ADMIN_SECRET = os.getenv("ADMIN_SECRET")
-if not ADMIN_SECRET:
-    raise RuntimeError("ADMIN_SECRET must be set (in .env locally, or Render's Environment tab).")
 
 # --------------------------------------------------
 # Supabase Storage client
@@ -96,6 +92,9 @@ ALLOWED_EXTENSIONS = {
 }
 
 TAB_SWITCH_FLAG_THRESHOLD = 3
+
+# Max number of DIFFERENT subjects one id_card_no may submit per week
+MAX_SUBMISSIONS_PER_WEEK = 3
 
 
 @app.get("/health")
@@ -155,8 +154,6 @@ def get_active_question(subject: str, class_level: str):
                 detail=f"No question found for subject '{subject}' in Class {class_level}"
             )
 
-        # Server-side start timestamp -- generated here, at the moment
-        # the question is actually served, not trusted from the client
         start_time = datetime.utcnow()
 
         return {
@@ -191,9 +188,38 @@ def get_all_active_questions():
 
 
 # --------------------------------------------------
+# How many subjects has this id_card_no already submitted this week,
+# and which ones -- useful for the frontend to grey out used subjects
+# before someone even tries to submit a 4th or repeat one.
+# --------------------------------------------------
+@app.get("/submissions/status")
+def get_submission_status(id_card_no: str):
+    db = SessionLocal()
+    try:
+        active_week = _get_active_week(db)
+
+        existing = db.query(Submission).filter(
+            Submission.id_card_no == id_card_no,
+            Submission.week_id == active_week.id
+        ).all()
+
+        used_subjects = [s.subject for s in existing]
+
+        return {
+            "week_id": active_week.id,
+            "submissions_used": len(used_subjects),
+            "submissions_remaining": max(0, MAX_SUBMISSIONS_PER_WEEK - len(used_subjects)),
+            "used_subjects": used_subjects
+        }
+    finally:
+        db.close()
+
+
+# --------------------------------------------------
 # Submit participant answer
 #
-# - One submission per id_card_no, ever.
+# - Same id_card_no may submit up to MAX_SUBMISSIONS_PER_WEEK
+#   DIFFERENT subjects per week; never the same subject twice.
 # - Accepts one or more files, uploaded to Supabase Storage under
 #   <name>_<uid>/, plus a readme.txt with submission metadata.
 # - start_time comes from the /questions/active response; submit_time
@@ -214,14 +240,30 @@ def create_submission(
     db = SessionLocal()
 
     try:
-        existing = db.query(Submission).filter(
-            Submission.id_card_no == id_card_no
+        # Check 1: has this person already submitted THIS subject this week?
+        already_this_subject = db.query(Submission).filter(
+            Submission.id_card_no == id_card_no,
+            Submission.week_id == week_id,
+            Submission.subject == subject
         ).first()
 
-        if existing:
+        if already_this_subject:
             raise HTTPException(
                 status_code=409,
-                detail="This ID card number has already submitted an answer"
+                detail="You have already submitted an answer for this subject this week"
+            )
+
+        # Check 2: has this person already hit the total cap for this week?
+        submissions_this_week = db.query(Submission).filter(
+            Submission.id_card_no == id_card_no,
+            Submission.week_id == week_id
+        ).count()
+
+        if submissions_this_week >= MAX_SUBMISSIONS_PER_WEEK:
+            raise HTTPException(
+                status_code=409,
+                detail=f"You have already submitted the maximum of "
+                       f"{MAX_SUBMISSIONS_PER_WEEK} answers this week"
             )
 
         # Validate every file's extension BEFORE saving any of them
@@ -246,7 +288,11 @@ def create_submission(
         safe_name = "".join(
             ch for ch in name if ch.isalnum() or ch in (" ", "_", "-")
         ).strip().replace(" ", "_") or "participant"
-        folder_name = f"{safe_name}_{user_uuid}"
+
+        # Include the subject in the folder name now, since one person
+        # can have multiple submissions (one folder per submission,
+        # not one folder per person overwriting itself)
+        folder_name = f"{safe_name}_{subject}_{user_uuid}"
 
         uploaded_paths = []
 
@@ -295,7 +341,7 @@ def create_submission(
         )
 
         db.add(new_submission)
-        db.flush()  # assigns new_submission.id without committing yet
+        db.flush()
 
         for storage_path, original_name in uploaded_paths:
             db.add(SubmissionFile(
@@ -304,9 +350,15 @@ def create_submission(
                 original_filename=original_name
             ))
 
-        db.commit()  # everything above commits together, atomically
+        db.commit()
 
-        return {"message": "Submission received", "name": name}
+        remaining = MAX_SUBMISSIONS_PER_WEEK - (submissions_this_week + 1)
+
+        return {
+            "message": "Submission received",
+            "name": name,
+            "submissions_remaining": remaining
+        }
 
     except HTTPException:
         db.rollback()
@@ -360,75 +412,5 @@ def get_leaderboard(class_level: str = None):
             "week_number": active_week.week_number,
             "leaderboard": leaderboard
         }
-    finally:
-        db.close()
-
-
-
-@app.post("/admin/close-week")
-def close_week(secret: str = Form(...), next_week_number: int = Form(...)):
-    """
-    Ends the current week:
-    1. Snapshots all scored submissions into `leaderboard`, ranked.
-    2. Wipes `submissions` and `submission_files`, resetting their id counters.
-    3. Deactivates the current week and activates `next_week_number`.
-
-    Destructive -- requires ADMIN_SECRET to match, since this is not
-    reversible once the truncate runs.
-    """
-    if secret != ADMIN_SECRET:
-        raise HTTPException(status_code=403, detail="Invalid admin secret")
-
-    db = SessionLocal()
-    try:
-        active_week = _get_active_week(db)
-
-        # Step 1: snapshot current results into leaderboard, ranked
-        db.execute(text("""
-            INSERT INTO leaderboard (week_number, name, subject, class_level, score, time_taken, rank)
-            SELECT
-                w.week_number,
-                s.name,
-                q.subject,
-                q.class_level,
-                s.score,
-                s.time_taken,
-                RANK() OVER (ORDER BY s.score DESC, s.time_taken ASC)
-            FROM submissions s
-            JOIN weeks w ON s.week_id = w.id
-            LEFT JOIN questions q ON s.question_id = q.id
-            WHERE s.score IS NOT NULL AND w.id = :week_id
-        """), {"week_id": active_week.id})
-
-        # Step 2: wipe submissions + submission_files, reset their id counters
-        db.execute(text(
-            "TRUNCATE TABLE submission_files, submissions RESTART IDENTITY CASCADE"
-        ))
-
-        # Step 3: flip which week is active
-        next_week = db.query(Week).filter(Week.week_number == next_week_number).first()
-
-        if next_week is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Week {next_week_number} does not exist. Create it first."
-            )
-
-        active_week.is_active = False
-        next_week.is_active = True
-
-        db.commit()
-
-        return {
-            "message": f"Week {active_week.week_number} closed and snapshotted. "
-                       f"Week {next_week_number} is now active."
-        }
-
-    except HTTPException:
-        db.rollback()
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to close week: {e}")
     finally:
         db.close()
