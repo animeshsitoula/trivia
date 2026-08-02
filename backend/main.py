@@ -32,7 +32,7 @@ Author:
 """
 
 from fastapi import FastAPI, HTTPException, Form, File, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.cors import CORSMiddleware
 from typing import List
 from database import SessionLocal, Week, Question, Submission, SubmissionFile
 from supabase import create_client
@@ -66,20 +66,24 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # --------------------------------------------------
 # CORS
+#
+# allow_origins   -> exact-match stable domains (GitHub Pages,
+#                    Vercel production domain, custom college domain
+#                    once that's live)
+# allow_origin_regex -> matches any Vercel PREVIEW deploy URL, since
+#                    those get a new random hash every push
+#                    (e.g. trivia-<hash>-animeshsitoula09-2898s-projects.vercel.app)
 # --------------------------------------------------
 
-_raw_origins = os.getenv(
-    "CORS_ORIGINS",
-    "http://127.0.0.1:5500,http://localhost:5500"
-)
 ALLOWED_ORIGINS = [
-        "https://animeshsitoula.github.io",
-        "https://trivia-m42in9vjt-animeshsitoula09-2898s-projects.vercel.app",
+    "https://animeshsitoula.github.io",
+    "https://trivia-two-livid.vercel.app",
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://trivia-.*-animeshsitoula09-2898s-projects\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )
