@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard — Weekly Trivia</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background:
+                radial-gradient(circle at 20% 10%, rgba(242,167,27,0.06), transparent 40%),
+                linear-gradient(180deg, #A31621 0%, #6E0F1A 55%, #4A0A12 100%);
+            color: #1C1C1C;
+            font-family: 'Inter', -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-bar {
+            text-align: center;
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(242,167,27,0.3);
+        }
+
+        .top-bar p {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            color: #F2A71B;
+            text-transform: uppercase;
+        }
+
+        .page-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 460px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 32px 20px;
+        }
+
+        h1 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #F2A71B;
+            text-align: center;
+        }
+
+        .week-label {
+            font-family: 'Oswald', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            color: #FBF8F0;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            text-align: center;
+            margin-top: 8px;
+            margin-bottom: 26px;
+        }
+
+        .board {
+            background-color: #FBF8F0;
+            border-radius: 6px;
+            width: 100%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+            border-top: 4px solid #F2A71B;
+            overflow: hidden;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
+            border-bottom: 1px solid #EFEBDD;
+        }
+
+        .row:last-child { border-bottom: none; }
+
+        .rank {
+            font-family: 'Oswald', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #A3A29C;
+            width: 24px;
+            text-align: center;
+        }
+
+        .row.top-1 .rank { color: #F2A71B; font-size: 20px; }
+        .row.top-2 .rank { color: #B0B0AA; font-size: 18px; }
+        .row.top-3 .rank { color: #C08A4E; font-size: 18px; }
+
+        .row .name {
+            flex: 1;
+        }
+
+        .row .name .full-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1C1C1C;
+        }
+
+        .row .name .subject {
+            font-size: 11px;
+            color: #8A8A84;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .row .score {
+            font-family: 'Oswald', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #7A0C1E;
+        }
+
+        .empty-state, .error-state {
+            padding: 40px 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #8A8A84;
+        }
+
+        .bottom-bar {
+            background-color: #F2A71B;
+            color: #4A0A12;
+            text-align: center;
+            padding: 10px 20px;
+            font-family: 'Oswald', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <header class="top-bar"><p>www.trinity.edu.np</p></header>
+
+    <main class="page-wrapper">
+        <h1>Leaderboard</h1>
+        <p class="week-label" id="week-label">Loading…</p>
+
+        <div class="board" id="board">
+            <div class="empty-state">Loading leaderboard…</div>
+        </div>
+    </main>
+
+    <footer class="bottom-bar">Education for the future</footer>
+
+    <script>
+        const API_BASE = "https://trivia-ehw5.onrender.com";
+
+        async function loadLeaderboard() {
+            const boardEl = document.getElementById("board");
+            const weekLabelEl = document.getElementById("week-label");
+
+            try {
+                const response = await fetch(`${API_BASE}/leaderboard`);
+
+                if (!response.ok) {
+                    weekLabelEl.textContent = "No active week found";
+                    boardEl.innerHTML = '<div class="error-state">Leaderboard is not available right now.</div>';
+                    return;
+                }
+
+                const data = await response.json();
+
+                weekLabelEl.textContent = `${data.week_number} — Top Scorers`;
+
+                if (!data.leaderboard || data.leaderboard.length === 0) {
+                    boardEl.innerHTML = '<div class="empty-state">No scores have been posted yet.</div>';
+                    return;
+                }
+
+                boardEl.innerHTML = "";
+
+                data.leaderboard.forEach((entry, index) => {
+                    const rank = index + 1;
+                    const row = document.createElement("div");
+                    row.className = "row" + (rank <= 3 ? ` top-${rank}` : "");
+
+                    row.innerHTML = `
+                        <div class="rank">${rank}</div>
+                        <div class="name">
+                            <div class="full-name"></div>
+                            <div class="subject"></div>
+                        </div>
+                        <div class="score">${entry.score}</div>
+                    `;
+
+                    // Set text via textContent (not template string) to
+                    // avoid inserting raw names as HTML
+                    row.querySelector(".full-name").textContent = entry.name;
+                    row.querySelector(".subject").textContent = entry.subject;
+
+                    boardEl.appendChild(row);
+                });
+
+            } catch (error) {
+                console.log("Failed to load leaderboard:", error);
+                weekLabelEl.textContent = "Could not load leaderboard";
+                boardEl.innerHTML = '<div class="error-state">Could not reach the server. Please try again shortly.</div>';
+            }
+        }
+
+        loadLeaderboard();
+    </script>
+</body>
+</html>
