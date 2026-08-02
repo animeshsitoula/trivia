@@ -55,7 +55,7 @@ async function loadQuestion() {
 
         const data = await response.json();
         console.log(data);
-        
+
         document.getElementById("subject-name").textContent = data.subject;
         document.getElementById("question-ref").textContent = data.week;
         document.getElementById("question-text").textContent = data.question;
@@ -87,6 +87,7 @@ async function handleSubmit(event) {
     }
 
     const form = event.target;
+    console.log("hidden value:", document.getElementById("question-id").value);
     const formData = new FormData(form);
 
     const payload = new FormData();
