@@ -200,6 +200,9 @@ def get_all_active_questions():
 #   Storage, under submissions/<name>_<uid>/, instead of
 #   writing to local disk.
 # --------------------------------------------------
+from fastapi import FastAPI, HTTPException, Form, File, UploadFile
+from typing import List
+
 @app.post("/submissions")
 def create_submission(
     name: str = Form(...),
@@ -210,28 +213,23 @@ def create_submission(
     question_id: int = Form(...),
     start_time: str = Form(...),
     tab_switch_count: int = Form(0),
-    file: UploadFile = File(...)
+    files: List[UploadFile] = File(...)
 ):
     db = SessionLocal()
 
-    existing = db.query(Submission).filter(
-        Submission.id_card_no == id_card_no
-    ).first()
-
+    existing = db.query(Submission).filter(Submission.id_card_no == id_card_no).first()
     if existing:
         db.close()
         raise HTTPException(status_code=409, detail="This ID card number has already submitted an answer")
 
-    extension = os.path.splitext(file.filename)[1]
-    if extension.lower() not in ALLOWED_EXTENSIONS:
-        db.close()
-        raise HTTPException(status_code=400, detail="Invalid file format")
+    # Validate every file's extension BEFORE saving any of them
+    for f in files:
+        ext = os.path.splitext(f.filename)[1].lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            db.close()
+            raise HTTPException(status_code=400, detail=f"Invalid file format: {f.filename}")
 
-    # Server-side submit timestamp -- this, not any client-reported
-    # time, is what "submit_time" means. time_taken is computed
-    # purely from these two server-generated values.
     submit_time = datetime.utcnow()
-
     try:
         parsed_start = datetime.fromisoformat(start_time)
     except ValueError:
@@ -240,24 +238,67 @@ def create_submission(
 
     time_taken_seconds = int((submit_time - parsed_start).total_seconds())
 
-    # ... (unchanged: folder_name, file upload to Supabase Storage, readme.txt) ...
+    user_uuid = str(uuid.uuid4())[:8]
+    safe_name = "".join(ch for ch in name if ch.isalnum() or ch in (" ", "_", "-")).strip().replace(" ", "_") or "participant"
+    folder_name = f"{safe_name}_{user_uuid}"
+
+    uploaded_paths = []
+
+    for f in files:
+        ext = os.path.splitext(f.filename)[1]
+        file_bytes = f.file.read()
+        unique_filename = str(uuid.uuid4()) + ext
+        storage_path = f"{folder_name}/{unique_filename}"
+
+        try:
+            supabase.storage.from_(SUPABASE_BUCKET).upload(
+                storage_path, file_bytes,
+                {"content-type": f.content_type or "application/octet-stream"}
+            )
+        except Exception as upload_error:
+            db.close()
+            raise HTTPException(status_code=502, detail=f"Failed to upload {f.filename}: {upload_error}")
+
+        uploaded_paths.append((storage_path, f.filename))
+
+    readme_text = (
+        f"Name: {name}\nEmail: {email}\nID Card No: {id_card_no}\nSubject: {subject}\n"
+        f"Submitted At (UTC): {submit_time}\n"
+        f"Files: {', '.join(name for _, name in uploaded_paths)}\n"
+    )
+    readme_path = f"{folder_name}/readme.txt"
+    supabase.storage.from_(SUPABASE_BUCKET).upload(
+        readme_path, readme_text.encode("utf-8"), {"content-type": "text/plain"}
+    )
 
     new_submission = Submission(
-        name=name,
-        email=email,
-        id_card_no=id_card_no,
-        week_id=week_id,
-        question_id=question_id,
-        subject=subject,
-        file_path=storage_path,
-        submitted_at=submit_time,
-        start_time=parsed_start,
-        submit_time=submit_time,
-        time_taken=time_taken_seconds,
-        tab_switch_count=tab_switch_count,
+        name=name, email=email, id_card_no=id_card_no,
+        week_id=week_id, question_id=question_id, subject=subject,
+        submitted_at=submit_time, start_time=parsed_start, submit_time=submit_time,
+        time_taken=time_taken_seconds, tab_switch_count=tab_switch_count,
         flagged=tab_switch_count >= TAB_SWITCH_FLAG_THRESHOLD
     )
 
+    try:
+        db.add(new_submission)
+        db.commit()
+        db.refresh(new_submission)   # needed to get new_submission.id for the files below
+
+        for storage_path, original_name in uploaded_paths:
+            db.add(SubmissionFile(
+                submission_id=new_submission.id,
+                file_path=storage_path,
+                original_filename=original_name
+            ))
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        db.close()
+        raise HTTPException(status_code=409, detail="This ID card number has already submitted an answer")
+
+    db.close()
+    return {"message": "Submission received", "name": name}
     # ... (unchanged: db.add / db.commit / error handling) ...  
 @app.get("/leaderboard")
 def get_leaderboard():
