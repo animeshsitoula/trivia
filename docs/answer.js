@@ -88,7 +88,7 @@ async function handleSubmit(event) {
 
     const form = event.target;
     const formData = new FormData(form);
-    console.log([...formData.entries()]);
+
 
     const payload = new FormData();
     payload.append("name", formData.get("name"));
