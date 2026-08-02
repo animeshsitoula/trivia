@@ -36,12 +36,17 @@ from typing import List
 from database import SessionLocal, Week, Question, Submission, SubmissionFile
 from supabase import create_client
 from dotenv import load_dotenv
+from sqlalchemy import text
 
 import uuid
 import os
 from datetime import datetime
 
 load_dotenv()
+
+ADMIN_SECRET = os.getenv("ADMIN_SECRET")
+if not ADMIN_SECRET:
+    raise RuntimeError("ADMIN_SECRET must be set (in .env locally, or Render's Environment tab).")
 
 # --------------------------------------------------
 # Supabase Storage client
@@ -355,5 +360,75 @@ def get_leaderboard(class_level: str = None):
             "week_number": active_week.week_number,
             "leaderboard": leaderboard
         }
+    finally:
+        db.close()
+
+
+
+@app.post("/admin/close-week")
+def close_week(secret: str = Form(...), next_week_number: int = Form(...)):
+    """
+    Ends the current week:
+    1. Snapshots all scored submissions into `leaderboard`, ranked.
+    2. Wipes `submissions` and `submission_files`, resetting their id counters.
+    3. Deactivates the current week and activates `next_week_number`.
+
+    Destructive -- requires ADMIN_SECRET to match, since this is not
+    reversible once the truncate runs.
+    """
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid admin secret")
+
+    db = SessionLocal()
+    try:
+        active_week = _get_active_week(db)
+
+        # Step 1: snapshot current results into leaderboard, ranked
+        db.execute(text("""
+            INSERT INTO leaderboard (week_number, name, subject, class_level, score, time_taken, rank)
+            SELECT
+                w.week_number,
+                s.name,
+                q.subject,
+                q.class_level,
+                s.score,
+                s.time_taken,
+                RANK() OVER (ORDER BY s.score DESC, s.time_taken ASC)
+            FROM submissions s
+            JOIN weeks w ON s.week_id = w.id
+            LEFT JOIN questions q ON s.question_id = q.id
+            WHERE s.score IS NOT NULL AND w.id = :week_id
+        """), {"week_id": active_week.id})
+
+        # Step 2: wipe submissions + submission_files, reset their id counters
+        db.execute(text(
+            "TRUNCATE TABLE submission_files, submissions RESTART IDENTITY CASCADE"
+        ))
+
+        # Step 3: flip which week is active
+        next_week = db.query(Week).filter(Week.week_number == next_week_number).first()
+
+        if next_week is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Week {next_week_number} does not exist. Create it first."
+            )
+
+        active_week.is_active = False
+        next_week.is_active = True
+
+        db.commit()
+
+        return {
+            "message": f"Week {active_week.week_number} closed and snapshotted. "
+                       f"Week {next_week_number} is now active."
+        }
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to close week: {e}")
     finally:
         db.close()
