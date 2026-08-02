@@ -146,3 +146,16 @@ class Submission(Base):
     time_taken = Column(Integer, nullable=True)        # NEW, in seconds
     submitted_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     file_path = Column(String, nullable=True)
+
+class Leaderboard(Base):
+    __tablename__ = "leaderboard"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    week_number = Column(Integer, nullable=False)
+    name = Column(String, nullable=False)
+    subject = Column(String, nullable=False)
+    class_level = Column(String, nullable=True)
+    score = Column(Integer, nullable=False)
+    time_taken = Column(Integer, nullable=True)
+    rank = Column(Integer, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
