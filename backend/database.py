@@ -112,146 +112,28 @@ class Week(Base):
 
 class Question(Base):
     __tablename__ = "questions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)
+    subject = Column(String, nullable=False)
+    class_level = Column(String, nullable=True)   # NEW
+    question_text = Column(String, nullable=False)
+    __table_args__ = (UniqueConstraint("week_id", "subject", "class_level"),)
 
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True
-    )
-
-    week_id = Column(
-        Integer,
-        ForeignKey("weeks.id"),
-        nullable=False
-    )
-
-    # e.g. "physics", "maths", "computer", "chemistry", "biology"
-    subject = Column(
-        String,
-        nullable=False
-    )
-
-    # Supports LaTeX: \(...\) inline, $$...$$ display (rendered
-    # by MathJax on the frontend)
-    question_text = Column(
-        String,
-        nullable=False
-    )
-
-    # Only one question per subject per week
-    __table_args__ = (
-        UniqueConstraint("week_id", "subject"),
-    )
-
-# --------------------------------------------------
-# Submission Table
-# Stores participant submission details.
-# Uploaded answer files live in Supabase Storage
-# (bucket configured via SUPABASE_BUCKET); file_path
-# stores the path *within that bucket*, not a local path.
-#
-# id_card_no is globally unique -> one submission per
-# person, ever, for the whole competition (not per week).
-# --------------------------------------------------
 
 class Submission(Base):
     __tablename__ = "submissions"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True
-    )
-
-    name = Column(
-        String,
-        nullable=False
-    )
-
-    email = Column(
-        String,
-        nullable=False
-    )
-
-    # Unique ID card number
-    # Prevents the same person submitting more than once,
-    # across any week.
-    id_card_no = Column(
-        String,
-        nullable=False,
-        unique=True
-    )
-
-    week_id = Column(
-        Integer,
-        ForeignKey("weeks.id"),
-        nullable=False
-    )
-
-    # Subject chosen (e.g. "physics"). Kept as a plain string here
-    # (not a foreign key to questions.id) so a submission still
-    # makes sense even if a question gets edited/deleted later.
-    subject = Column(
-        String,
-        nullable=False
-    )
-
-    # Path to the answer file INSIDE the Supabase Storage
-    # bucket, e.g. "Animesh_a82f91bc/3f9c1b2e.pdf"
-    file_path = Column(
-        String,
-        nullable=False
-    )
-
-    # Filled later during checking
-    score = Column(
-        Integer,
-        nullable=True
-    )
-
-    # How many times the answering tab lost focus/was switched
-    # away from while this person was on answer.html. A signal
-    # for manual review, not an automatic disqualification.
-    tab_switch_count = Column(
-        Integer,
-        nullable=False,
-        default=0
-    )
-
-    # Auto-set True when tab_switch_count crosses a threshold
-    # (see main.py). Filter by this in Supabase's Table Editor
-    # to review flagged submissions.
-    flagged = Column(
-        Boolean,
-        nullable=False,
-        default=False
-    )
-
-    submitted_at = Column(
-        DateTime,
-        nullable=False,
-        default=datetime.utcnow
-    )
-
-# --------------------------------------------------
-# Create tables automatically
-# Runs when database.py is executed
-# --------------------------------------------------
-
-if __name__ == "__main__":
-    try:
-        connection = engine.connect()
-        print(
-            "Database connection successful"
-        )
-        connection.close()
-    except Exception as e:
-
-        print(
-            "Database connection failed:",
-            e
-        )
-
-    Base.metadata.create_all(
-        bind=engine
-    )
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+    id_card_no = Column(String, nullable=False, unique=True)
+    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)
+    question_id = Column(Integer, ForeignKey("questions.id"), nullable=True)   # NEW
+    subject = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    score = Column(Integer, nullable=True)
+    tab_switch_count = Column(Integer, nullable=False, default=0)
+    flagged = Column(Boolean, nullable=False, default=False)
+    start_time = Column(DateTime, nullable=True)      # NEW
+    submit_time = Column(DateTime, nullable=True)     # NEW
+    time_taken = Column(Integer, nullable=True)        # NEW, in seconds
+    submitted_at = Column(DateTime, nullable=False, default=datetime.utcnow)
