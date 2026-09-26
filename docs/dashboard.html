@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — Weekly Trivia</title>
+    <link rel="stylesheet" href="templates/style.css">
+    <style>
+        /* ==========================================================
+           Dashboard-only additions, built on top of style.css's
+           existing :root variables (--maroon-*, --gold-*, --cream,
+           --font-display, --font-body, --radius-*, --shadow-card).
+           ========================================================== */
+
+        body.dashboard-body {
+            flex-direction: row;
+            align-items: stretch;
+        }
+
+        /* ---------------- Sidebar ---------------- */
+
+        .dash-sidebar {
+            width: 240px;
+            flex-shrink: 0;
+            background: linear-gradient(180deg, var(--maroon-950), #2E0609 140%);
+            padding: 26px 20px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(242,167,27,0.15);
+        }
+
+        .dash-sidebar .collab-mark {
+            margin-bottom: 6px;
+            font-size: 10px;
+        }
+
+        .dash-logo {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gold-500);
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            margin-bottom: 30px;
+        }
+
+        .dash-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .dash-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.55);
+            font-family: var(--font-display);
+            font-size: 12.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 11px 14px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            text-align: left;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+
+        .dash-nav-item svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .dash-nav-item:hover {
+            background-color: rgba(255,255,255,0.05);
+            color: var(--cream);
+        }
+
+        .dash-nav-item.active {
+            background: linear-gradient(90deg, rgba(242,167,27,0.18), rgba(242,167,27,0.04));
+            color: var(--gold-500);
+            box-shadow: inset 3px 0 0 var(--gold-500);
+        }
+
+        .dash-logout {
+            margin-top: auto;
+            background: none;
+            border: 1.5px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.6);
+            font-family: var(--font-display);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 10px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .dash-logout:hover {
+            border-color: #C0392B;
+            color: #E57368;
+        }
+
+        /* ---------------- Main content area ---------------- */
+
+        .dash-main {
+            flex: 1;
+            padding: 34px 40px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .dash-view {
+            animation: fadeIn 0.25s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dash-view-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+
+        .dash-view-header h2 {
+            font-family: var(--font-display);
+            font-size: 26px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--gold-500);
+        }
+
+        .dash-view-sub {
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+            margin-top: 4px;
+        }
+
+        /* ---------------- Stat cards (dashboard overview) ---------------- */
+
+        .dash-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .dash-stat-card {
+            position: relative;
+            background-color: var(--cream);
+            border-radius: var(--radius-lg);
+            padding: 20px 20px 18px;
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+        }
+
+        .dash-stat-card::after {
+            content: "";
+            position: absolute;
+            top: -30%;
+            right: -20%;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(242,167,27,0.25), transparent 70%);
+        }
+
+        .dash-stat-label {
+            font-family: var(--font-display);
+            font-size: 10.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--ink-faint);
+        }
+
+        .dash-stat-value {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--maroon-800);
+            margin-top: 6px;
+        }
+
+        /* ---------------- Buttons ---------------- */
+
+        .dash-btn-primary {
+            background: linear-gradient(135deg, var(--gold-500), var(--gold-600));
+            color: var(--maroon-950);
+            border: none;
+            padding: 11px 20px;
+            border-radius: var(--radius-md);
+            font-family: var(--font-display);
+            font-size: 12.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            box-shadow: 0 6px 16px rgba(242,167,27,0.25);
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+
+        .dash-btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px rgba(242,167,27,0.35);
+        }
+
+        .dash-btn-secondary {
+            background: var(--cream);
+            color: var(--maroon-800);
+            border: 1.5px solid var(--line);
+            padding: 10px 18px;
+            border-radius: var(--radius-md);
+            font-family: var(--font-display);
+            font-size: 12.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: border-color 0.15s ease;
+        }
+
+        .dash-btn-secondary:hover {
+            border-color: var(--maroon-800);
+        }
+
+        .dash-btn-danger {
+            background: none;
+            border: 1.5px solid rgba(192,57,43,0.4);
+            color: #C0392B;
+            padding: 7px 12px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-display);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        .dash-btn-danger:hover {
+            background-color: rgba(192,57,43,0.08);
+        }
+
+        .dash-btn-icon {
+            background: none;
+            border: 1.5px solid var(--line);
+            color: var(--maroon-800);
+            padding: 7px 10px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 12px;
+            transition: border-color 0.15s ease, background-color 0.15s ease;
+        }
+
+        .dash-btn-icon:hover {
+            border-color: var(--maroon-800);
+            background-color: var(--gold-100);
+        }
+
+        /* ---------------- Filter bar ---------------- */
+
+        .dash-filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 14px;
+            background-color: var(--cream);
+            border-radius: var(--radius-md);
+            padding: 14px 18px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-card);
+        }
+
+        .dash-filter-bar label {
+            font-family: var(--font-display);
+            font-size: 10.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ink-faint);
+            margin: 0;
+        }
+
+        .dash-filter-bar select,
+        .dash-filter-bar input[type="text"] {
+            font-family: var(--font-body);
+            font-size: 13px;
+            padding: 7px 10px;
+            border: 1.5px solid var(--line);
+            border-radius: var(--radius-sm);
+            background-color: #FBFAF6;
+            color: var(--ink);
+        }
+
+        .dash-check-filter {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12.5px;
+            color: var(--ink-muted);
+            text-transform: none;
+            letter-spacing: normal;
+            font-family: var(--font-body);
+            font-weight: 500;
+        }
+
+        /* ---------------- Table ---------------- */
+
+        .dash-table-wrap {
+            background-color: var(--cream);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+            border-top: 4px solid var(--gold-500);
+        }
+
+        .dash-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .dash-table thead th {
+            text-align: left;
+            font-family: var(--font-display);
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ink-faint);
+            padding: 14px 18px;
+            border-bottom: 1.5px solid var(--line);
+            background-color: #F5F1E6;
+        }
+
+        .dash-table tbody td {
+            padding: 14px 18px;
+            font-size: 13.5px;
+            color: var(--ink);
+            border-bottom: 1px solid var(--line);
+            vertical-align: middle;
+        }
+
+        .dash-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .dash-table tbody tr {
+            transition: background-color 0.12s ease;
+        }
+
+        .dash-table tbody tr:hover {
+            background-color: #FAF6EA;
+        }
+
+        .dash-table-empty {
+            text-align: center;
+            color: var(--ink-faint);
+            font-size: 13px;
+            padding: 30px !important;
+        }
+
+        .dash-question-preview {
+            max-width: 320px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+        .dash-pill {
+            display: inline-block;
+            font-family: var(--font-display);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 3px 10px;
+            border-radius: 999px;
+        }
+
+        .dash-pill--active {
+            background-color: rgba(29,158,117,0.12);
+            color: #1D9E75;
+        }
+
+        .dash-pill--inactive {
+            background-color: rgba(138,138,132,0.15);
+            color: var(--ink-faint);
+        }
+
+        .dash-pill--flagged {
+            background-color: rgba(192,57,43,0.1);
+            color: #C0392B;
+        }
+
+        .dash-pill--score {
+            background-color: rgba(11,37,69,0.08);
+            color: var(--maroon-800);
+        }
+
+        .dash-file-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-family: var(--font-display);
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--maroon-800);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-right: 10px;
+        }
+
+        .dash-file-link:hover {
+            color: var(--gold-600);
+        }
+
+        .dash-row-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .dash-score-input {
+            width: 60px;
+            padding: 5px 8px;
+            border: 1.5px solid var(--line);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+        }
+
+        /* ---------------- Modals (add/edit question) ---------------- */
+
+        .dash-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(74,10,18,0.75);
+            backdrop-filter: blur(3px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 60;
+        }
+
+        .dash-modal-box {
+            position: relative;
+            background-color: var(--cream);
+            border-radius: var(--radius-lg);
+            padding: 30px 28px;
+            width: 100%;
+            max-width: 480px;
+            max-height: 88vh;
+            overflow-y: auto;
+            box-shadow: 0 30px 70px rgba(0,0,0,0.5);
+            border-top: 4px solid var(--gold-500);
+        }
+
+        .dash-modal-close {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: var(--ink-faint);
+            cursor: pointer;
+        }
+
+        .dash-modal-close:hover {
+            color: var(--maroon-800);
+        }
+
+        .dash-modal-title {
+            font-family: var(--font-display);
+            font-size: 17px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--maroon-800);
+            margin-bottom: 20px;
+        }
+
+        .dash-modal-box label {
+            font-family: var(--font-display);
+            font-size: 10.5px;
+            font-weight: 600;
+            color: var(--ink-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 14px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .dash-modal-box select,
+        .dash-modal-box textarea {
+            width: 100%;
+            font-family: var(--font-body);
+            font-size: 14px;
+            padding: 10px 12px;
+            border: 1.5px solid var(--line);
+            border-radius: var(--radius-sm);
+            background-color: #FBFAF6;
+            color: var(--ink);
+            resize: vertical;
+        }
+
+        .dash-modal-box textarea:focus,
+        .dash-modal-box select:focus {
+            outline: none;
+            border-color: var(--maroon-800);
+        }
+
+        .dash-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 22px;
+        }
+
+        /* ---------------- Toast (save confirmation) ---------------- */
+
+        .dash-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background-color: var(--maroon-950);
+            color: var(--gold-500);
+            font-family: var(--font-display);
+            font-size: 12.5px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            padding: 13px 20px;
+            border-radius: var(--radius-md);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            border-left: 3px solid var(--gold-500);
+            z-index: 80;
+        }
+    </style>
+</head>
+<body class="dashboard-body">
+
+    <aside class="dash-sidebar">
+        <p class="collab-mark">SciTech Guild <span class="x">×</span> Trinity Computer Council</p>
+        <p class="dash-logo">Trivia Admin</p>
+
+        <nav class="dash-nav">
+            <button type="button" class="dash-nav-item active" data-view="overview-view">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                Overview
+            </button>
+            <button type="button" class="dash-nav-item" data-view="questions-view">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.9.4-1.5 1-1.5 2.2"/><circle cx="12" cy="17" r="0.6" fill="currentColor"/></svg>
+                Questions
+            </button>
+            <button type="button" class="dash-nav-item" data-view="submissions-view">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+                Submissions
+            </button>
+        </nav>
+
+        <button type="button" class="dash-logout" id="dash-logout-btn">Log out</button>
+    </aside>
+
+    <main class="dash-main">
+
+        <!-- ==================== OVERVIEW ==================== -->
+        <section id="overview-view" class="dash-view">
+            <div class="dash-view-header">
+                <div>
+                    <h2>Overview</h2>
+                    <p class="dash-view-sub">Snapshot of the currently active week.</p>
+                </div>
+            </div>
+
+            <div class="dash-stat-grid">
+                <div class="dash-stat-card">
+                    <p class="dash-stat-label">Active week</p>
+                    <p class="dash-stat-value" id="stat-active-week">—</p>
+                </div>
+                <div class="dash-stat-card">
+                    <p class="dash-stat-label">Submissions</p>
+                    <p class="dash-stat-value" id="stat-total-submissions">—</p>
+                </div>
+                <div class="dash-stat-card">
+                    <p class="dash-stat-label">Ungraded</p>
+                    <p class="dash-stat-value" id="stat-ungraded">—</p>
+                </div>
+                <div class="dash-stat-card">
+                    <p class="dash-stat-label">Flagged</p>
+                    <p class="dash-stat-value" id="stat-flagged">—</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== QUESTIONS ==================== -->
+        <section id="questions-view" class="dash-view" hidden>
+            <div class="dash-view-header">
+                <div>
+                    <h2>Questions</h2>
+                    <p class="dash-view-sub">Add, edit, or remove questions for any week.</p>
+                </div>
+                <button type="button" class="dash-btn-primary" id="open-add-question-btn">+ Add Question</button>
+            </div>
+
+            <div class="dash-filter-bar">
+                <label for="questions-week-filter">Week</label>
+                <select id="questions-week-filter">
+                    <option value="">All weeks</option>
+                </select>
+
+                <label for="questions-subject-filter">Subject</label>
+                <select id="questions-subject-filter">
+                    <option value="">All subjects</option>
+                    <option value="physics">Physics</option>
+                    <option value="maths">Maths</option>
+                    <option value="computer">Computer</option>
+                    <option value="chemistry">Chemistry</option>
+                    <option value="biology">Biology</option>
+                </select>
+            </div>
+
+            <div class="dash-table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Week</th>
+                            <th>Subject</th>
+                            <th>Class</th>
+                            <th>Question</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="questions-table-body">
+                        <tr><td colspan="5" class="dash-table-empty">Loading questions…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ==================== SUBMISSIONS ==================== -->
+        <section id="submissions-view" class="dash-view" hidden>
+            <div class="dash-view-header">
+                <div>
+                    <h2>Submissions</h2>
+                    <p class="dash-view-sub">Review answers, assign scores, and download files.</p>
+                </div>
+            </div>
+
+            <div class="dash-filter-bar">
+                <label for="submissions-week-filter">Week</label>
+                <select id="submissions-week-filter">
+                    <option value="">All weeks</option>
+                </select>
+
+                <label for="submissions-subject-filter">Subject</label>
+                <select id="submissions-subject-filter">
+                    <option value="">All subjects</option>
+                    <option value="physics">Physics</option>
+                    <option value="maths">Maths</option>
+                    <option value="computer">Computer</option>
+                    <option value="chemistry">Chemistry</option>
+                    <option value="biology">Biology</option>
+                </select>
+
+                <label class="dash-check-filter">
+                    <input type="checkbox" id="flagged-only-filter">
+                    Flagged only
+                </label>
+
+                <label class="dash-check-filter">
+                    <input type="checkbox" id="ungraded-only-filter">
+                    Ungraded only
+                </label>
+            </div>
+
+            <div class="dash-table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>ID Card</th>
+                            <th>Subject</th>
+                            <th>Time</th>
+                            <th>Tab switches</th>
+                            <th>Score</th>
+                            <th>Files</th>
+                        </tr>
+                    </thead>
+                    <tbody id="submissions-table-body">
+                        <tr><td colspan="7" class="dash-table-empty">Loading submissions…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== ADD / EDIT QUESTION MODAL ==================== -->
+    <div id="question-modal" class="dash-modal-overlay" hidden>
+        <div class="dash-modal-box">
+            <button type="button" class="dash-modal-close" id="question-modal-close" aria-label="Close">×</button>
+            <p class="dash-modal-title" id="question-modal-title">Add Question</p>
+
+            <form id="question-form">
+                <input type="hidden" id="question-form-id" name="id">
+
+                <label for="question-form-week">Week</label>
+                <select id="question-form-week" name="week_id" required>
+                    <option value="">Select a week</option>
+                </select>
+
+                <label for="question-form-subject">Subject</label>
+                <select id="question-form-subject" name="subject" required>
+                    <option value="">Select a subject</option>
+                    <option value="physics">Physics</option>
+                    <option value="maths">Maths</option>
+                    <option value="computer">Computer</option>
+                    <option value="chemistry">Chemistry</option>
+                    <option value="biology">Biology</option>
+                </select>
+
+                <label for="question-form-class">Class</label>
+                <select id="question-form-class" name="class_level" required>
+                    <option value="">Select a class</option>
+                    <option value="11">Class 11</option>
+                    <option value="12">Class 12</option>
+                </select>
+
+                <label for="question-form-text">Question text</label>
+                <textarea id="question-form-text" name="question_text" rows="8" required
+                    placeholder="Supports LaTeX: \(...\) inline, $$...$$ display"></textarea>
+
+                <div class="dash-modal-actions">
+                    <button type="button" class="dash-btn-secondary" id="question-form-cancel">Cancel</button>
+                    <button type="submit" class="dash-btn-primary">Save Question</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== DELETE CONFIRM MODAL ==================== -->
+    <div id="delete-confirm-modal" class="dash-modal-overlay" hidden>
+        <div class="dash-modal-box" style="max-width: 360px; text-align: center;">
+            <p class="dash-modal-title">Delete this question?</p>
+            <p style="font-size: 13px; color: var(--ink-muted); margin-bottom: 20px;">
+                This cannot be undone.
+            </p>
+            <div class="dash-modal-actions" style="justify-content: center;">
+                <button type="button" class="dash-btn-secondary" id="delete-cancel-btn">Cancel</button>
+                <button type="button" class="dash-btn-danger" id="delete-confirm-btn" style="padding: 10px 18px;">Delete</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
