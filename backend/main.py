@@ -34,7 +34,7 @@ Author:
 from fastapi import FastAPI, HTTPException, Form, File, UploadFile
 from starlette.middleware.cors import CORSMiddleware
 from typing import List
-from database import SessionLocal, Week, Question, Submission, SubmissionFile
+from database import SessionLocal, Week, Question, Submission, SubmissionFile,Admin
 from supabase import create_client
 from dotenv import load_dotenv
 from sqlalchemy import text
