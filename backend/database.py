@@ -170,12 +170,3 @@ class Admin(Base):
     password_hash = Column(String, nullable= False)
     role = Column(String,nullable = False)
 
-class QuestionIn(BaseModel):
-    week_id: int
-    subject: str
-    class_level: str
-    question_text: str
-
-
-class ScoreIn(BaseModel):
-    score: int
