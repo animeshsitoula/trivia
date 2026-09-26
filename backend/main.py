@@ -31,7 +31,8 @@ Author:
 - Animesh
 """
 
-from fastapi import FastAPI, HTTPException, Form, File, UploadFile
+from fastapi import FastAPI, HTTPException, Form, File, UploadFile, Header, Depends
+from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from typing import List
 from database import SessionLocal, Week, Question, Submission, SubmissionFile,Admin
@@ -103,6 +104,21 @@ TAB_SWITCH_FLAG_THRESHOLD = 3
 
 # Max number of DIFFERENT subjects one id_card_no may submit per week
 MAX_SUBMISSIONS_PER_WEEK = 3
+
+class QuestionIn(BaseModel):
+    week_id: int
+    subject: str
+    class_level: str
+    question_text: str
+
+
+class ScoreIn(BaseModel):
+    score: int
+    
+ADMIN_SECRET = os.getenv("ADMIN_SECRET")
+
+if not ADMIN_SECRET:
+    raise RuntimeError("ADMIN_SECRET must be set (in .env locally, or Render's Environment tab).")
 
 
 @app.get("/health")
@@ -446,6 +462,11 @@ def admin_login(username: str = Form(...), password: str = Form(...)):
     finally:
         db.close()
 
+
+def verify_admin(x_admin_secret: str = Header(None)):
+    if x_admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing admin secret")
+
 @app.get("/admin/weeks", dependencies=[Depends(verify_admin)])
 def admin_list_weeks():
     db = SessionLocal()
@@ -640,7 +661,6 @@ def admin_set_score(submission_id: int, payload: ScoreIn):
         raise HTTPException(status_code=400, detail=f"Could not update score: {e}")
     finally:
         db.close()
-
 
 @app.get("/admin/stats", dependencies=[Depends(verify_admin)])
 def admin_stats():
