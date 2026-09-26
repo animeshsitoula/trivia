@@ -445,3 +445,227 @@ def admin_login(username: str = Form(...), password: str = Form(...)):
 
     finally:
         db.close()
+
+@app.get("/admin/weeks", dependencies=[Depends(verify_admin)])
+def admin_list_weeks():
+    db = SessionLocal()
+    try:
+        weeks = db.query(Week).order_by(Week.week_number.asc()).all()
+        return [
+            {"id": w.id, "week_number": w.week_number, "is_active": w.is_active}
+            for w in weeks
+        ]
+    finally:
+        db.close()
+
+
+@app.get("/admin/questions", dependencies=[Depends(verify_admin)])
+def admin_list_questions(week_id: int = None, subject: str = None):
+    db = SessionLocal()
+    try:
+        query = db.query(Question, Week.week_number).join(Week, Question.week_id == Week.id)
+
+        if week_id is not None:
+            query = query.filter(Question.week_id == week_id)
+        if subject is not None:
+            query = query.filter(Question.subject == subject)
+
+        results = query.order_by(Week.week_number.desc()).all()
+
+        return [
+            {
+                "id": q.id,
+                "week_id": q.week_id,
+                "week_number": week_number,
+                "subject": q.subject,
+                "class_level": q.class_level,
+                "question_text": q.question_text
+            }
+            for q, week_number in results
+        ]
+    finally:
+        db.close()
+
+
+@app.post("/admin/questions", dependencies=[Depends(verify_admin)])
+def admin_create_question(payload: QuestionIn):
+    db = SessionLocal()
+    try:
+        new_question = Question(
+            week_id=payload.week_id,
+            subject=payload.subject,
+            class_level=payload.class_level,
+            question_text=payload.question_text
+        )
+        db.add(new_question)
+        db.commit()
+        db.refresh(new_question)
+
+        return {"id": new_question.id, "message": "Question created"}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Could not create question: {e}")
+    finally:
+        db.close()
+
+
+@app.put("/admin/questions/{question_id}", dependencies=[Depends(verify_admin)])
+def admin_update_question(question_id: int, payload: QuestionIn):
+    db = SessionLocal()
+    try:
+        question = db.query(Question).filter(Question.id == question_id).first()
+
+        if question is None:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        question.week_id = payload.week_id
+        question.subject = payload.subject
+        question.class_level = payload.class_level
+        question.question_text = payload.question_text
+
+        db.commit()
+        return {"message": "Question updated"}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Could not update question: {e}")
+    finally:
+        db.close()
+
+
+@app.delete("/admin/questions/{question_id}", dependencies=[Depends(verify_admin)])
+def admin_delete_question(question_id: int):
+    db = SessionLocal()
+    try:
+        question = db.query(Question).filter(Question.id == question_id).first()
+
+        if question is None:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        db.delete(question)
+        db.commit()
+        return {"message": "Question deleted"}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not delete question (it may have existing submissions referencing it): {e}"
+        )
+    finally:
+        db.close()
+
+
+@app.get("/admin/submissions", dependencies=[Depends(verify_admin)])
+def admin_list_submissions(
+    week_id: int = None,
+    subject: str = None,
+    flagged: bool = None,
+    ungraded: bool = None
+):
+    db = SessionLocal()
+    try:
+        query = db.query(Submission)
+
+        if week_id is not None:
+            query = query.filter(Submission.week_id == week_id)
+        if subject is not None:
+            query = query.filter(Submission.subject == subject)
+        if flagged is not None:
+            query = query.filter(Submission.flagged == flagged)
+        if ungraded is not None and ungraded:
+            query = query.filter(Submission.score.is_(None))
+
+        submissions = query.order_by(Submission.submitted_at.desc()).all()
+
+        result = []
+        for s in submissions:
+            files = db.query(SubmissionFile).filter(
+                SubmissionFile.submission_id == s.id
+            ).all()
+
+            file_list = []
+            for f in files:
+                signed = supabase.storage.from_(SUPABASE_BUCKET).create_signed_url(
+                    f.file_path, 3600  # link valid for 1 hour
+                )
+                file_list.append({
+                    "id": f.id,
+                    "original_filename": f.original_filename,
+                    "download_url": signed.get("signedURL") or signed.get("signed_url")
+                })
+
+            result.append({
+                "id": s.id,
+                "name": s.name,
+                "id_card_no": s.id_card_no,
+                "subject": s.subject,
+                "time_taken": s.time_taken,
+                "tab_switch_count": s.tab_switch_count,
+                "flagged": s.flagged,
+                "score": s.score,
+                "files": file_list
+            })
+
+        return result
+    finally:
+        db.close()
+
+
+@app.patch("/admin/submissions/{submission_id}/score", dependencies=[Depends(verify_admin)])
+def admin_set_score(submission_id: int, payload: ScoreIn):
+    db = SessionLocal()
+    try:
+        submission = db.query(Submission).filter(Submission.id == submission_id).first()
+
+        if submission is None:
+            raise HTTPException(status_code=404, detail="Submission not found")
+
+        submission.score = payload.score
+        db.commit()
+        return {"message": "Score updated"}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Could not update score: {e}")
+    finally:
+        db.close()
+
+
+@app.get("/admin/stats", dependencies=[Depends(verify_admin)])
+def admin_stats():
+    db = SessionLocal()
+    try:
+        active_week = db.query(Week).filter(Week.is_active == True).first()
+
+        if active_week is None:
+            return {"active_week": None, "total_submissions": 0, "ungraded": 0, "flagged": 0}
+
+        total = db.query(Submission).filter(Submission.week_id == active_week.id).count()
+        ungraded = db.query(Submission).filter(
+            Submission.week_id == active_week.id,
+            Submission.score.is_(None)
+        ).count()
+        flagged = db.query(Submission).filter(
+            Submission.week_id == active_week.id,
+            Submission.flagged == True
+        ).count()
+
+        return {
+            "active_week": active_week.week_number,
+            "total_submissions": total,
+            "ungraded": ungraded,
+            "flagged": flagged
+        }
+    finally:
+        db.close()
