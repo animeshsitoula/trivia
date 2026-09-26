@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login — Weekly Trivia</title>
+    <link rel="stylesheet" href="/trivia/docs/templates/style.css">
+    <style>
+        /* ==========================================================
+           Admin-login-only flourishes, layered on top of the shared
+           design system (--maroon-*, --gold-*, --cream, etc. all
+           come from style.css's :root already).
+           ========================================================== */
+
+        .admin-page-wrapper {
+            justify-content: center;
+        }
+
+        .admin-badge {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, var(--gold-400), var(--gold-600) 75%);
+            border: 2px solid var(--cream);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 0 6px rgba(242,167,27,0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 18px;
+        }
+
+        .admin-badge svg {
+            width: 28px;
+            height: 28px;
+            color: var(--maroon-950);
+        }
+
+        .admin-card {
+            position: relative;
+            background-color: var(--cream);
+            border-radius: var(--radius-lg);
+            padding: 36px 30px 30px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+        }
+
+        .admin-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--maroon-800), var(--gold-500), var(--maroon-800));
+            background-size: 200% 100%;
+            animation: shimmer 3.5s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 0% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .admin-card-title {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--maroon-800);
+            text-align: center;
+        }
+
+        .admin-card-sub {
+            font-size: 13px;
+            color: var(--ink-faint);
+            text-align: center;
+            margin-top: 6px;
+            margin-bottom: 26px;
+        }
+
+        .field-icon-row {
+            position: relative;
+        }
+
+        .field-icon-row .field-icon {
+            position: absolute;
+            left: 4px;
+            bottom: 12px;
+            width: 16px;
+            height: 16px;
+            color: var(--ink-faint);
+            pointer-events: none;
+            transition: color 0.15s ease;
+        }
+
+        .field-icon-row input {
+            padding-left: 26px;
+        }
+
+        .field-icon-row input:focus ~ .field-icon,
+        .field-icon-row:focus-within .field-icon {
+            color: var(--maroon-800);
+        }
+
+        .admin-login-form button[type="submit"] {
+            width: 100%;
+            position: relative;
+        }
+
+        .admin-login-form button[type="submit"]::after {
+            content: "→";
+            margin-left: 8px;
+            display: inline-block;
+            transition: transform 0.15s ease;
+        }
+
+        .admin-login-form button[type="submit"]:hover::after {
+            transform: translateX(3px);
+        }
+
+        .admin-footer-note {
+            text-align: center;
+            font-size: 11px;
+            color: var(--ink-faint);
+            margin-top: 22px;
+            letter-spacing: 0.02em;
+        }
+
+        .admin-error {
+            margin-top: 18px;
+            border: 1.5px solid #C0392B;
+            background-color: rgba(192, 57, 43, 0.06);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            text-align: center;
+        }
+
+        .admin-error .title {
+            font-family: var(--font-display);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #C0392B;
+            margin-bottom: 4px;
+        }
+
+        .admin-error p:not(.title) {
+            font-size: 12.5px;
+            color: var(--ink-muted);
+        }
+    </style>
+</head>
+<body>
+    <header class="top-bar"><p class="site-url">www.trinity.edu.np</p></header>
+
+    <main class="page-wrapper admin-page-wrapper">
+        <p class="collab-mark">SciTech Guild <span class="x">×</span> Trinity Computer Council</p>
+
+        <div class="admin-card">
+            <div class="admin-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="5" y="11" width="14" height="9" rx="2"/>
+                    <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                </svg>
+            </div>
+
+            <p class="admin-card-title">Admin Access</p>
+            <p class="admin-card-sub">Sign in to manage weeks, questions, and submissions.</p>
+
+            <form class="admin-login-form" id="login-form">
+                <div class="field field-icon-row">
+                    <label for="admin-username-input">Username</label>
+                    <input type="text" id="admin-username-input" name="username" placeholder="e.g. animesh" autocomplete="username" required>
+                    <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="8" r="4"/>
+                        <path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>
+                    </svg>
+                </div>
+
+                <div class="field field-icon-row">
+                    <label for="admin-password-input">Password</label>
+                    <input type="password" id="admin-password-input" name="password" placeholder="••••••••••••" autocomplete="current-password" required>
+                    <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="5" y="11" width="14" height="9" rx="2"/>
+                        <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                    </svg>
+                </div>
+
+                <button type="submit">Unlock</button>
+
+                <div class="admin-error" id="login-error" hidden>
+                    <p class="title">Access denied</p>
+                    <p id="login-error-text">Incorrect username or password.</p>
+                </div>
+            </form>
+
+            <p class="admin-footer-note">Restricted area · Trinity Computer Council</p>
+        </div>
+    </main>
+
+    <footer class="bottom-bar">Education for the future</footer>
+
+    <script src="admin-login.js"></script>
+</body>
+</html>
