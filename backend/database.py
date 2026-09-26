@@ -161,3 +161,11 @@ class Leaderboard(Base):
     time_taken = Column(Integer, nullable=True)
     rank = Column(Integer, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+class Admin(Base):
+    __tablename__ = "admins"
+
+    admin_id = Column(Integer, primary_key=True, nullable=False)
+    username = Column(String, nullable=False, unique= True)
+    password_hash = Column(String, nullable= False)
+    role = Column(String,nullable = False)

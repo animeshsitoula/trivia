@@ -37,6 +37,7 @@ from typing import List
 from database import SessionLocal, Week, Question, Submission, SubmissionFile
 from supabase import create_client
 from dotenv import load_dotenv
+from sqlalchemy import text
 
 import uuid
 import os
@@ -419,5 +420,28 @@ def get_leaderboard(class_level: str = None):
             "week_number": active_week.week_number,
             "leaderboard": leaderboard
         }
+    finally:
+        db.close()
+
+@app.get("/admin/login")
+def admin_login(username: str = Form(...), password: str = Form(...)):
+    db=SessionLocal()
+    try:
+        result = db.execute(
+            text(
+                """
+                    SELECT admin_id, username FROM admin
+                    WHERE username = :username
+                    AND password_hash = crypt(:password, password_hash)
+                """
+            ),
+            {"username":username, "password":password}
+        ).first()
+
+        if result is None:
+            raise HTTPException(status_code=401, detail = "Invalid login credentials")
+
+        return result
+
     finally:
         db.close()
