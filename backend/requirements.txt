@@ -2,6 +2,6 @@ fastapi
 uvicorn
 sqlalchemy
 psycopg2-binary
-python-multipart
-supabase
 python-dotenv
+supabase
+python-multipart
